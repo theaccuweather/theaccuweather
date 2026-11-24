@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-page text-ink antialiased; }
+
+/* Small satellite dot that orbits the large globe logo. */
+@media (prefers-reduced-motion: no-preference) {
+  .taw-orbit { transform-box: view-box; transform-origin: 100px 100px; animation: taw-spin 7s linear infinite; }
+}
+@keyframes taw-spin { to { transform: rotate(360deg); } }
+
+/* Hide scrollbars on horizontal strips but keep them scrollable. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
