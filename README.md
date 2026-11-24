@@ -84,3 +84,4 @@ Locally, the globe guesses your country from your time zone. On Vercel it uses y
 - **Phase 3:** hourly data collection (database), a worldwide ranking, 30-day history.
 - **Phase 4:** a live AQI map and rain radar.
 # 1.-theaccuweather
+# 1.-theaccuweather
