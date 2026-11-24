@@ -22,15 +22,28 @@ in an aqi.in-style layout, with a real-colour Earth logo that turns to the visit
 
 City pages look like `/city/1261481/new-delhi` (the number is the GeoNames id).
 
+## Design
+
+- Dark theme by default, with a **Lights** switch in the header for a light theme.
+- Each city page opens with a dark street map (OpenStreetMap tiles, darkened with CSS) and a large AQI card
+  over it, with **AQI** and **Weather** tabs, Locate me, Save and Share buttons.
+- The **AQI standard** (US / India / EU) is chosen in the header. Visitors in India start on India AQI.
+- The cloud mascot and skyline are original SVG drawings in `src/components/Decor.tsx`.
+
 ## How the data flows
 
 ```
 Browser -> Vercel (Next.js) -> Open-Meteo forecast / air-quality / geocoding APIs
                |
-               +-> responses cached for 15 minutes, so 1,000 visitors to Delhi = 1 API call
+               +-> responses cached for 1 hour, so 1,000 visitors to Delhi in an hour = 2 API calls
 ```
 
-No API keys are needed. Every call happens on the server (`src/lib/api/*`), so it's easy to
+No API keys are needed.
+
+**API budget:** Open-Meteo's free plan allows fewer than 10,000 calls a day, and a request with
+more than 10 variables counts as more than one call. Each request here uses 10 or fewer
+variables, so a city page refresh costs 2 calls (weather + air quality). If the limit is hit,
+pages keep showing their last good version instead of an error. Every call happens on the server (`src/lib/api/*`), so it's easy to
 switch providers later.
 
 ## Run it on your computer
@@ -83,5 +96,3 @@ Locally, the globe guesses your country from your time zone. On Vercel it uses y
   OpenAQ station readings and a "locations in this city" table.
 - **Phase 3:** hourly data collection (database), a worldwide ranking, 30-day history.
 - **Phase 4:** a live AQI map and rain radar.
-# 1.-theaccuweather
-# 1.-theaccuweather

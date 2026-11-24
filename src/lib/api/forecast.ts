@@ -1,4 +1,5 @@
-import { getJson, num } from './client';
+import { getJson, hourIndex, localNow, num } from './client';
+import { isDaytime, sunTimes, type SunDay } from '@/lib/sun';
 
 export type Forecast = {
   current: {
@@ -26,67 +27,85 @@ export type Forecast = {
 };
 
 type Raw = {
-  current: Record<string, unknown>;
+  utc_offset_seconds?: number;
   hourly: Record<string, unknown[]> & { time: string[] };
-  daily: Record<string, unknown[]> & { time: string[] };
 };
+
+// Exactly 10 hourly variables for 7 days = 1 call on Open-Meteo's counting (more than 10
+// variables counts as extra calls). Current conditions, daily highs and lows, rain totals,
+// the day's sky and day/night are all derived from these hourly values.
+const HOURLY = [
+  'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'wind_speed_10m', 'uv_index',
+  'visibility', 'pressure_msl', 'weather_code', 'precipitation_probability', 'precipitation',
+] as const;
 
 /** Current conditions, the next 24 hours and 7 days for one location (metric units). */
 export async function getForecast(lat: number, lon: number): Promise<Forecast> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current:
-      'temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,uv_index,visibility,pressure_msl,weather_code,is_day',
-    hourly: 'temperature_2m,precipitation_probability,weather_code,is_day',
-    daily: 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,sunrise,sunset',
+    hourly: HOURLY.join(','),
     timezone: 'auto', // all times come back in the location's own local time
     forecast_days: '7',
     wind_speed_unit: 'kmh',
   });
   const raw = await getJson<Raw>(`https://api.open-meteo.com/v1/forecast?${params}`);
-  const c = raw.current;
-  const vis = num(c.visibility);
+  const h = raw.hourly;
+  const times: string[] = h?.time ?? [];
+  const col = (k: (typeof HOURLY)[number]) => (h?.[k] ?? []).map(num);
+  const temp = col('temperature_2m'), rh = col('relative_humidity_2m'), feels = col('apparent_temperature');
+  const wind = col('wind_speed_10m'), uv = col('uv_index'), vis = col('visibility'), pres = col('pressure_msl');
+  const code = col('weather_code'), pop = col('precipitation_probability'), rain = col('precipitation');
 
-  // Start the hourly strip at the current hour.
-  const nowHour = String(c.time).slice(0, 13) + ':00';
-  const times = raw.hourly.time;
-  let start = times.findIndex((t) => t >= nowHour);
-  if (start < 0) start = 0;
+  const offset = typeof raw.utc_offset_seconds === 'number' ? raw.utc_offset_seconds : 0;
+  const now = localNow(offset);
+  const i0 = hourIndex(times, now);
 
-  const hourly = times.slice(start, start + 24).map((time, k) => {
-    const i = start + k;
+  // Group the hours by local date for the daily table, and work out each day's sun times.
+  const order: string[] = [];
+  const byDay = new Map<string, number[]>();
+  times.forEach((t, i) => {
+    const d = t.slice(0, 10);
+    if (!byDay.has(d)) { byDay.set(d, []); order.push(d); }
+    byDay.get(d)!.push(i);
+  });
+  const sun = new Map<string, SunDay>(order.map((d) => [d, sunTimes(d, lat, lon, offset)]));
+  const isDayAt = (t: string) => isDaytime(t, sun.get(t.slice(0, 10)));
+  const pick = (arr: (number | null)[], idx: number[]) => idx.map((i) => arr[i]).filter((v): v is number => v != null);
+
+  const daily = order.map((date) => {
+    const idx = byDay.get(date)!;
+    const t = pick(temp, idx), c = pick(code, idx), p = pick(rain, idx);
+    const s = sun.get(date)!;
     return {
-      time,
-      temp: num(raw.hourly.temperature_2m[i]),
-      pop: num(raw.hourly.precipitation_probability[i]),
-      code: num(raw.hourly.weather_code[i]),
-      isDay: raw.hourly.is_day[i] !== 0,
+      date,
+      max: t.length ? Math.max(...t) : null,
+      min: t.length ? Math.min(...t) : null,
+      code: c.length ? Math.max(...c) : null, // the day's most severe weather, like Open-Meteo's daily code
+      precip: p.length ? Math.round(p.reduce((a, b) => a + b, 0) * 10) / 10 : null,
+      sunrise: s.sunrise,
+      sunset: s.sunset,
     };
   });
 
-  const daily = raw.daily.time.map((date, i) => ({
-    date,
-    max: num(raw.daily.temperature_2m_max[i]),
-    min: num(raw.daily.temperature_2m_min[i]),
-    code: num(raw.daily.weather_code[i]),
-    precip: num(raw.daily.precipitation_sum[i]),
-    sunrise: String(raw.daily.sunrise[i] ?? ''),
-    sunset: String(raw.daily.sunset[i] ?? ''),
-  }));
+  const hourly = times.slice(i0, i0 + 24).map((time, k) => {
+    const i = i0 + k;
+    return { time, temp: temp[i] ?? null, pop: pop[i] ?? null, code: code[i] ?? null, isDay: isDayAt(time) };
+  });
 
+  const v = vis[i0] ?? null;
   return {
     current: {
-      time: String(c.time),
-      temperature: num(c.temperature_2m),
-      feelsLike: num(c.apparent_temperature),
-      humidity: num(c.relative_humidity_2m),
-      wind: num(c.wind_speed_10m),
-      uv: num(c.uv_index),
-      visibilityKm: vis == null ? null : Math.round(vis / 100) / 10,
-      pressure: num(c.pressure_msl),
-      code: num(c.weather_code),
-      isDay: c.is_day !== 0,
+      time: now,
+      temperature: temp[i0] ?? null,
+      feelsLike: feels[i0] ?? null,
+      humidity: rh[i0] ?? null,
+      wind: wind[i0] ?? null,
+      uv: uv[i0] ?? null,
+      visibilityKm: v == null ? null : Math.round(v / 100) / 10, // API gives metres
+      pressure: pres[i0] ?? null,
+      code: code[i0] ?? null,
+      isDay: isDayAt(now),
     },
     hourly,
     daily,
@@ -101,7 +120,8 @@ export async function getWeatherMany(points: { lat: number; lon: number }[]) {
     current: 'temperature_2m,weather_code,is_day',
     timezone: 'auto',
   });
-  const raw = await getJson<unknown>(`https://api.open-meteo.com/v1/forecast?${params}`);
+  // Refreshed every 3 hours: only the ranking's temperature column uses this.
+  const raw = await getJson<unknown>(`https://api.open-meteo.com/v1/forecast?${params}`, 10_800);
   const list = (Array.isArray(raw) ? raw : [raw]) as { current?: Record<string, unknown> }[];
   return list.map((r) => ({
     temp: num(r.current?.temperature_2m),

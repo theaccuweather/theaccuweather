@@ -94,13 +94,13 @@ export default function SearchBox({ size = 'md' }: { size?: 'md' | 'lg' }) {
           className={`min-w-0 flex-1 bg-transparent px-3 outline-none placeholder:text-muted ${pad}`}
         />
         {status === 'loading' && <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-label="Loading" />}
-        <button type="button" onClick={useMyLocation} title="Use my location" className="mr-1.5 rounded-full p-2 text-brand hover:bg-white">
+        <button type="button" onClick={useMyLocation} title="Use my location" className="mr-1.5 rounded-full p-2 text-link hover:bg-card">
           <Icon name="location" label="Use my location" />
         </button>
       </div>
       {showList && (
-        <ul id={`${listId}-list`} role="listbox" className="absolute left-0 right-0 z-40 mt-1 overflow-hidden rounded-xl border border-line bg-white shadow-lg">
-          {status === 'error' && <li className="px-4 py-3 text-sm text-red-700">{message}</li>}
+        <ul id={`${listId}-list`} role="listbox" className="absolute left-0 right-0 z-40 mt-1 overflow-hidden rounded-xl border border-line bg-card shadow-lg">
+          {status === 'error' && <li className="px-4 py-3 text-sm text-red-500">{message}</li>}
           {status === 'empty' && <li className="px-4 py-3 text-sm text-muted">No places match &ldquo;{q}&rdquo;.</li>}
           {results.map((r, i) => (
             <li

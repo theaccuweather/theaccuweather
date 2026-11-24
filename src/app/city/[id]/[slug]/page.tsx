@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import CityView from '@/components/CityView';
 import { cityHref, getPlace, slugify } from '@/lib/api/geocoding';
 
-export const revalidate = 900; // each city page is cached and refreshed every 15 minutes
+export const revalidate = 3600; // each city page is cached and refreshed once an hour
 
 type Props = { params: Promise<{ id: string; slug: string }> };
 
@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!place) return { title: 'City not found' };
   const where = [place.name, place.country].filter(Boolean).join(', ');
   return {
-    title: `${place.name} AQI and weather today`,
-    description: `Live air quality index (AQI), PM2.5, PM10 and the 7-day weather forecast for ${where}.`,
+    title: `${place.name} weather and AQI today`,
+    description: `Current weather, hourly and 7-day forecast, plus live air quality (AQI, PM2.5, PM10) for ${where}.`,
     alternates: { canonical: cityHref(place) },
   };
 }
@@ -34,9 +34,10 @@ export default async function CityPage({ params }: Props) {
   return (
     <CityView
       name={place.name}
+      region={[place.admin1, place.country].filter((x): x is string => Boolean(x) && x !== place.name).join(', ')}
       lat={place.latitude}
       lon={place.longitude}
-      crumbs={[place.country, place.admin1].filter((x): x is string => Boolean(x) && x !== place.name)}
+      href={cityHref(place)}
     />
   );
 }

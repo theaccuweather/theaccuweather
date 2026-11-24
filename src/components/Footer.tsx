@@ -3,7 +3,7 @@ import { SITE } from '@/lib/site';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="border-t border-line bg-card">
       <div className="mx-auto max-w-6xl space-y-1 px-4 py-5 text-center text-xs text-muted">
         <p>&copy; {new Date().getFullYear()} theaccuweather &middot; {SITE.disclaimer} &middot; <Link href="/about" className="hover:text-brand">About</Link></p>
         <p>

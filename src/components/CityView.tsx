@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import LiveCard from './LiveCard';
+import MapBanner from './MapBanner';
 import GlobeFocus from './GlobeFocus';
 import Section from './Section';
 import ErrorPanel from './ErrorPanel';
@@ -9,56 +9,43 @@ import HourlyStrip from './HourlyStrip';
 import DailyForecast from './DailyForecast';
 import { getForecast } from '@/lib/api/forecast';
 import { getAirQuality } from '@/lib/api/airQuality';
+import { isRateLimit } from '@/lib/api/client';
 import { categorize, HEALTH_ADVICE } from '@/lib/aqi';
-import { describeWeather } from '@/lib/weatherCodes';
-import { clockLabel, updatedLabel } from '@/lib/format';
+import { buildHero } from '@/lib/hero';
 
-type Props = { name: string; lat: number; lon: number; crumbs: string[] };
+type Props = { name: string; region: string; lat: number; lon: number; href?: string };
 
 /** Everything on a city page. Weather and AQI load in parallel; if one fails, the other still shows. */
-export default async function CityView({ name, lat, lon, crumbs }: Props) {
+export default async function CityView({ name, region, lat, lon, href }: Props) {
   const [fc, aq] = await Promise.allSettled([getForecast(lat, lon), getAirQuality(lat, lon)]);
+  // If the provider is rate-limiting us, or nothing loaded, throw: Next.js then keeps showing
+  // the last good version of this page instead of caching an error version for an hour.
+  const failed = [fc, aq].filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (failed.length === 2 || failed.some((f) => isRateLimit(f.reason))) throw failed[0].reason;
+
   const forecast = fc.status === 'fulfilled' ? fc.value : null;
   const air = aq.status === 'fulfilled' ? aq.value : null;
+  const hero = buildHero(name, region, lat, lon, forecast, air);
   const usCat = categorize('us', air?.us.aqi ?? null);
-  const updated = forecast?.current.time ?? air?.time;
-  const today = forecast?.daily[0];
-  const pm = (k: string) => air?.pollutants.find((p) => p.key === k)?.value ?? null;
 
   return (
     <div className="space-y-4">
       <GlobeFocus lat={lat} lon={lon} color={usCat?.color} />
 
       <div>
-        <p className="text-xs text-muted">
-          <Link href="/" className="hover:text-brand">Home</Link>
-          {crumbs.map((c) => <span key={c}> &rsaquo; {c}</span>)} &rsaquo; {name}
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{name} air quality (AQI) and weather</h1>
-        <p className="text-sm text-muted">
-          Real-time PM2.5, PM10 and weather in {name}
-          {updated && <> &middot; Last updated: {updatedLabel(updated)} (local time)</>}
-        </p>
+        <MapBanner lat={lat} lon={lon} color={hero.usColor} />
+        <div className="relative z-10 -mt-16 sm:-mt-24 sm:px-6">
+          {air || forecast ? <LiveCard data={hero} href={href} headingAs="h1" /> : <ErrorPanel title={`We couldn't load live data for ${name}`} />}
+        </div>
       </div>
 
-      {air || forecast ? (
-        <LiveCard
-          air={air ? { us: air.us, in: air.in, eu: air.eu, pm25: pm('pm2_5'), pm10: pm('pm10') } : null}
-          weather={forecast ? {
-            temp: forecast.current.temperature,
-            feelsLike: forecast.current.feelsLike,
-            ...describeWeather(forecast.current.code, forecast.current.isDay),
-            humidity: forecast.current.humidity,
-            wind: forecast.current.wind,
-            uv: forecast.current.uv,
-            visibilityKm: forecast.current.visibilityKm,
-            pressure: forecast.current.pressure,
-            sunrise: today ? clockLabel(today.sunrise) : '\u2014',
-            sunset: today ? clockLabel(today.sunset) : '\u2014',
-          } : null}
-        />
+      {forecast ? (
+        <>
+          <Section title="Next 24 hours"><HourlyStrip hours={forecast.hourly} /></Section>
+          <Section title="7-day weather and AQI forecast"><DailyForecast days={forecast.daily} aqiByDay={air?.dailyMax ?? {}} /></Section>
+        </>
       ) : (
-        <ErrorPanel title={`We couldn't load live data for ${name}`} />
+        <ErrorPanel title="The weather forecast is unavailable right now" />
       )}
 
       {air ? (
@@ -68,15 +55,6 @@ export default async function CityView({ name, lat, lon, crumbs }: Props) {
         </>
       ) : (
         <ErrorPanel title="Air quality data is unavailable right now" />
-      )}
-
-      {forecast ? (
-        <>
-          <Section title="Next 24 hours"><HourlyStrip hours={forecast.hourly} /></Section>
-          <Section title="7-day weather and AQI forecast"><DailyForecast days={forecast.daily} aqiByDay={air?.dailyMax ?? {}} /></Section>
-        </>
-      ) : (
-        <ErrorPanel title="The weather forecast is unavailable right now" />
       )}
 
       {usCat && (

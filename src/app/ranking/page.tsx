@@ -5,10 +5,11 @@ import ErrorPanel from '@/components/ErrorPanel';
 import { POPULAR_CITIES } from '@/lib/cities';
 import { getAqiMany } from '@/lib/api/airQuality';
 import { getWeatherMany } from '@/lib/api/forecast';
+import { isBuildPhase, isRateLimit } from '@/lib/api/client';
 import { cityHref } from '@/lib/api/geocoding';
 import { categorize, textOn } from '@/lib/aqi';
 
-export const revalidate = 900;
+export const revalidate = 3600;
 export const metadata: Metadata = {
   title: 'Most polluted major cities in the world right now',
   description: 'Live US AQI ranking of major world cities, from most to least polluted.',
@@ -16,6 +17,11 @@ export const metadata: Metadata = {
 
 export default async function RankingPage() {
   const [aqi, wx] = await Promise.allSettled([getAqiMany(POPULAR_CITIES), getWeatherMany(POPULAR_CITIES)]);
+  // Keep the last good page live if the provider fails (except during `next build`).
+  if (!isBuildPhase()) {
+    if (aqi.status === 'rejected') throw aqi.reason;
+    if (wx.status === 'rejected' && isRateLimit(wx.reason)) throw wx.reason;
+  }
   if (aqi.status === 'rejected') {
     return <ErrorPanel title="The ranking is unavailable right now" detail="Please refresh in a few minutes." />;
   }
@@ -33,7 +39,7 @@ export default async function RankingPage() {
       <div>
         <p className="text-xs text-muted"><Link href="/" className="hover:text-brand">Home</Link> &rsaquo; Ranking</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Most polluted major cities right now</h1>
-        <p className="text-sm text-muted">Live US AQI for {rows.length} major cities &middot; refreshed every 15 minutes</p>
+        <p className="text-sm text-muted">Live US AQI for {rows.length} major cities &middot; refreshed every hour</p>
       </div>
       <Section>
         <div className="overflow-x-auto">

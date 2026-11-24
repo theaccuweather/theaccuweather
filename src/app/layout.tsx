@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
+import 'leaflet/dist/leaflet.css';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -18,11 +19,17 @@ export const metadata: Metadata = {
   openGraph: { siteName: SITE.name, type: 'website' },
 };
 
-export const viewport: Viewport = { themeColor: '#0a7cff', width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = { themeColor: '#0b1220', width: 'device-width', initialScale: 1 };
+
+// Runs before the page paints, so a visitor who chose the light theme never sees a dark flash.
+const THEME_SCRIPT = "try{if(localStorage.getItem('taw-theme')==='light')document.documentElement.classList.add('light')}catch(e){}";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={poppins.variable}>
+    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen font-sans">
         <Header />
         <main className="mx-auto w-full max-w-6xl px-3 pb-10 pt-4 sm:px-4">{children}</main>

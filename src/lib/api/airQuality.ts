@@ -1,5 +1,8 @@
-import { getJson, num } from './client';
-import { computeIndiaAqi, POLLUTANTS, POLLUTANT_LABEL, type PollutantKey } from '@/lib/aqi';
+import { getJson, hourIndex, localNow, num } from './client';
+import {
+  computeEuSubIndices, computeIndiaAqi, computeUsSubIndices, mainPollutant, POLLUTANTS, POLLUTANT_LABEL,
+  type PollutantKey,
+} from '@/lib/aqi';
 
 export type ScaleReading = { aqi: number | null; dominant: PollutantKey | null };
 export type AirQuality = {
@@ -13,51 +16,38 @@ export type AirQuality = {
 };
 
 type Raw = {
-  current: Record<string, unknown>;
+  utc_offset_seconds?: number;
   hourly: Record<string, unknown[]> & { time: string[] };
 };
 
-const EU_SUB: PollutantKey[] = ['pm2_5', 'pm10', 'nitrogen_dioxide', 'ozone', 'sulphur_dioxide'];
-
-/** Pick the pollutant with the highest sub-index: that's the "main pollutant". */
-function dominant(c: Record<string, unknown>, prefix: string, keys: readonly PollutantKey[]): PollutantKey | null {
-  let best: PollutantKey | null = null;
-  let max = -1;
-  for (const k of keys) {
-    const v = num(c[`${prefix}${k}`]);
-    if (v != null && v > max) { max = v; best = k; }
-  }
-  return best;
-}
+// 8 hourly variables for 6 days = 1 call on Open-Meteo's counting (previously 26 variables,
+// about 2.6 calls). Per-pollutant sub-indices are now worked out in src/lib/aqi.ts.
+const HOURLY = ['us_aqi', 'european_aqi', ...POLLUTANTS];
 
 /** Air quality for one location from Open-Meteo's global air-quality model (CAMS). */
 export async function getAirQuality(lat: number, lon: number): Promise<AirQuality> {
-  const current = [
-    'us_aqi', 'european_aqi', ...POLLUTANTS,
-    ...POLLUTANTS.map((p) => `us_aqi_${p}`),
-    ...EU_SUB.map((p) => `european_aqi_${p}`),
-  ].join(',');
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
-    current,
-    hourly: ['us_aqi', ...POLLUTANTS].join(','),
-    past_days: '1', // gives us the last 24 hours for the graph and India AQI
+    hourly: HOURLY.join(','),
+    past_days: '1', // the last 24 hours, for the graph and the 24-hour averages
     forecast_days: '5',
     timezone: 'auto',
   });
   const raw = await getJson<Raw>(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
-  const c = raw.current;
-  const times = raw.hourly.time;
+  const times: string[] = raw.hourly?.time ?? [];
+  const series = (k: string) => (raw.hourly?.[k] ?? []).map(num);
+  const offset = typeof raw.utc_offset_seconds === 'number' ? raw.utc_offset_seconds : 0;
+  const now = localNow(offset);
+  const end = hourIndex(times, now); // index of the current hour
 
-  // Index of the current hour inside the hourly arrays.
-  const nowHour = String(c.time).slice(0, 13) + ':00';
-  let end = times.indexOf(nowHour);
-  if (end < 0) end = Math.max(0, times.findIndex((t) => t > nowHour) - 1);
+  const usHourly = series('us_aqi');
+  const euHourly = series('european_aqi');
+  const byKey: Partial<Record<PollutantKey, (number | null)[]>> = {};
+  for (const k of POLLUTANTS) byKey[k] = series(k);
 
-  const usHourly = raw.hourly.us_aqi.map(num);
   const history: { time: string; aqi: number | null }[] = [];
-  for (let i = Math.max(0, end - 23); i <= end; i++) history.push({ time: times[i], aqi: usHourly[i] });
+  for (let i = Math.max(0, end - 23); i <= end && i < times.length; i++) history.push({ time: times[i], aqi: usHourly[i] ?? null });
 
   const dailyMax: Record<string, number> = {};
   for (let i = end; i < times.length; i++) {
@@ -67,25 +57,24 @@ export async function getAirQuality(lat: number, lon: number): Promise<AirQualit
     dailyMax[d] = Math.max(dailyMax[d] ?? 0, Math.round(v));
   }
 
-  const hourlyByKey: Partial<Record<PollutantKey, (number | null)[]>> = {};
-  for (const k of POLLUTANTS) hourlyByKey[k] = (raw.hourly[k] ?? []).map(num);
-
-  const round = (v: number | null) => (v == null ? null : Math.round(v));
+  const usSubs = computeUsSubIndices(byKey, end);
+  const euSubs = computeEuSubIndices(byKey, end);
+  const round = (v: number | null | undefined) => (v == null ? null : Math.round(v));
 
   return {
-    time: String(c.time),
-    us: { aqi: round(num(c.us_aqi)), dominant: dominant(c, 'us_aqi_', POLLUTANTS) },
-    eu: { aqi: round(num(c.european_aqi)), dominant: dominant(c, 'european_aqi_', EU_SUB) },
-    in: computeIndiaAqi(hourlyByKey, end),
+    time: now,
+    us: { aqi: round(usHourly[end]), dominant: mainPollutant(usSubs) },
+    eu: { aqi: round(euHourly[end]), dominant: mainPollutant(euSubs) },
+    in: computeIndiaAqi(byKey, end),
     pollutants: POLLUTANTS.map((key) => {
-      const v = num(c[key]);
+      const v = byKey[key]?.[end] ?? null;
       const isCo = key === 'carbon_monoxide';
       return {
         key,
         label: POLLUTANT_LABEL[key],
         value: v == null ? null : isCo ? Math.round(v / 10) / 100 : Math.round(v),
         unit: isCo ? 'mg/m\u00b3' : '\u00b5g/m\u00b3',
-        usSub: num(c[`us_aqi_${key}`]),
+        usSub: usSubs[key] ?? null,
       };
     }),
     history,

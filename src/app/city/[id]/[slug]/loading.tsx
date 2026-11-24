@@ -1,13 +1,13 @@
-// Shown instantly while a city page loads (skeleton placeholders).
+// Shown instantly while a city page loads (placeholders in the same shape as the page).
 export default function Loading() {
-  const block = 'animate-pulse rounded-2xl bg-white border border-line';
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading city data">
-      <div className="h-6 w-48 animate-pulse rounded bg-line" />
-      <div className="h-8 w-80 max-w-full animate-pulse rounded bg-line" />
-      <div className={`${block} h-72`} />
-      <div className={`${block} h-32`} />
-      <div className={`${block} h-48`} />
+      <div>
+        <div className="-mt-4 ml-[calc(50%-50vw)] h-56 w-screen animate-pulse bg-raised sm:h-72" />
+        <div className="relative z-10 -mt-16 h-80 animate-pulse rounded-3xl border border-line bg-card sm:mx-6 sm:-mt-24" />
+      </div>
+      <div className="h-32 animate-pulse rounded-2xl border border-line bg-card" />
+      <div className="h-48 animate-pulse rounded-2xl border border-line bg-card" />
     </div>
   );
 }

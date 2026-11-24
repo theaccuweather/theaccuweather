@@ -3,7 +3,8 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBolt, faCloud, faCloudMoon, faCloudRain, faCloudShowersHeavy, faCloudSun, faCloudSunRain,
-  faDroplet, faLocationCrosshairs, faMagnifyingGlass, faMoon, faSmog, faSnowflake, faSun, faWind,
+  faArrowRight, faDroplet, faEye, faGauge, faLocationCrosshairs, faMagnifyingGlass, faMoon, faShareNodes,
+  faSmog, faSnowflake, faSun, faWind,
 } from '@fortawesome/free-solid-svg-icons';
 import type { WeatherIconName } from '@/lib/weatherCodes';
 
@@ -12,6 +13,7 @@ const ICONS = {
   'cloud-rain': faCloudRain, 'cloud-showers-heavy': faCloudShowersHeavy, 'cloud-sun-rain': faCloudSunRain,
   snowflake: faSnowflake, bolt: faBolt, droplet: faDroplet, wind: faWind,
   location: faLocationCrosshairs, search: faMagnifyingGlass,
+  share: faShareNodes, arrow: faArrowRight, eye: faEye, gauge: faGauge, uv: faSun,
 } as const;
 export type IconName = keyof typeof ICONS;
 
@@ -19,7 +21,7 @@ export type IconName = keyof typeof ICONS;
 const TINT: Partial<Record<IconName, string>> = {
   sun: 'text-amber-500', moon: 'text-indigo-400', 'cloud-sun': 'text-amber-500', 'cloud-moon': 'text-indigo-400',
   cloud: 'text-slate-400', smog: 'text-slate-400', 'cloud-rain': 'text-sky-500', 'cloud-showers-heavy': 'text-sky-600',
-  'cloud-sun-rain': 'text-sky-500', snowflake: 'text-sky-300', bolt: 'text-yellow-500', droplet: 'text-sky-500',
+  'cloud-sun-rain': 'text-sky-500', snowflake: 'text-sky-300', bolt: 'text-yellow-500', droplet: 'text-sky-500', uv: 'text-amber-500',
 };
 
 export default function Icon({ name, className = '', label }: { name: IconName | WeatherIconName; className?: string; label?: string }) {

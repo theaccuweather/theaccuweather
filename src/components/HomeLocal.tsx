@@ -1,64 +1,87 @@
 'use client';
 
 /*
- * "Your location" card on the home page. Uses the visitor's approximate location
- * (from Vercel), or asks the browser if that isn't available.
+ * The top of the home page: map + big AQI card for the visitor's area.
+ * Location comes from Vercel (approximate, from the IP address). Without it (e.g. on your own
+ * computer) we use a big city in the visitor's time zone, or ask the browser.
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Icon from './Icon';
+import LiveCard from './LiveCard';
+import MapBanner from './MapBanner';
 import { focusGlobe } from './GlobeLogo';
-import { textOn } from '@/lib/aqi';
-import type { WeatherIconName } from '@/lib/weatherCodes';
+import { POPULAR_CITIES } from '@/lib/cities';
+import type { HeroData } from '@/lib/hero';
 
-type Summary = {
-  lat: number; lon: number; aqi: number | null; label: string | null; color: string | null;
-  pm25: number | null; pm10: number | null; temp: number | null; humidity: number | null; wind: number | null;
-  weather: { label: string; icon: WeatherIconName } | null;
+const TZ_CITY: Record<string, string> = {
+  'Asia/Kolkata': 'New Delhi', 'Asia/Calcutta': 'New Delhi', 'Europe/London': 'London', 'Europe/Paris': 'Paris',
+  'Europe/Berlin': 'Berlin', 'America/New_York': 'New York', 'America/Los_Angeles': 'Los Angeles',
+  'America/Toronto': 'Toronto', 'Asia/Tokyo': 'Tokyo', 'Asia/Dubai': 'Dubai', 'Asia/Singapore': 'Singapore',
+  'Australia/Sydney': 'Sydney', 'Asia/Shanghai': 'Shanghai', 'Asia/Karachi': 'Karachi', 'Asia/Dhaka': 'Dhaka',
 };
+
+function countryName(code: unknown): string {
+  if (typeof code !== 'string' || !code) return '';
+  try { return new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase()) ?? ''; } catch { return ''; }
+}
 
 export default function HomeLocal() {
   const [state, setState] = useState<'loading' | 'ready' | 'unknown' | 'error'>('loading');
-  const [data, setData] = useState<Summary | null>(null);
-  const [city, setCity] = useState<string | null>(null);
+  const [data, setData] = useState<HeroData | null>(null);
 
-  const load = useCallback(async (lat: number, lon: number) => {
+  const load = useCallback(async (lat: number, lon: number, name: string, region: string) => {
     setState('loading');
     try {
-      const res = await fetch(`/api/summary?lat=${lat}&lon=${lon}`);
+      const q = new URLSearchParams({ lat: String(lat), lon: String(lon), name, region });
+      const res = await fetch(`/api/summary?${q}`);
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setData(json);
+      if (!res.ok) throw new Error(json.error ?? 'Request failed');
+      const hero = json as HeroData;
+      setData(hero);
       setState('ready');
-      focusGlobe({ lat, lon, color: json.color ?? undefined }, 'ip');
+      focusGlobe({ lat: hero.lat, lon: hero.lon, color: hero.usColor ?? undefined }, 'ip');
     } catch {
       setState('error');
     }
   }, []);
 
   useEffect(() => {
+    const fallback = () => {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+      const city = POPULAR_CITIES.find((c) => c.name === TZ_CITY[tz]);
+      if (city) load(city.lat, city.lon, city.name, city.country);
+      else setState('unknown');
+    };
     fetch('/api/locate')
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (typeof d.lat === 'number') { setCity(d.city); load(d.lat, d.lon); }
-        else setState('unknown');
+        if (d && typeof d.lat === 'number' && typeof d.lon === 'number') load(d.lat, d.lon, d.city || 'Your location', countryName(d.country));
+        else fallback();
       })
-      .catch(() => setState('unknown'));
+      .catch(fallback);
   }, [load]);
 
   const askBrowser = () => {
     navigator.geolocation?.getCurrentPosition(
-      (p) => { setCity(null); load(p.coords.latitude, p.coords.longitude); },
+      (p) => load(p.coords.latitude, p.coords.longitude, 'Your location', ''),
       () => setState('unknown'),
       { timeout: 10000 },
     );
   };
 
-  if (state === 'loading') return <div className="h-40 animate-pulse rounded-2xl border border-line bg-white" aria-label="Loading your local air quality" />;
+  if (state === 'loading') {
+    return (
+      <div aria-busy="true" aria-label="Loading air quality for your area">
+        <div className="-mt-4 ml-[calc(50%-50vw)] h-56 w-screen animate-pulse bg-raised sm:h-72" />
+        <div className="relative z-10 -mt-16 h-80 animate-pulse rounded-3xl border border-line bg-card sm:mx-6 sm:-mt-24" />
+      </div>
+    );
+  }
 
   if (state !== 'ready' || !data) {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-5">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-card p-5">
         <p className="flex-1 text-sm">
           {state === 'error' ? 'Live data for your area is unavailable right now.' : 'See air quality and weather where you are.'}
         </p>
@@ -69,35 +92,15 @@ export default function HomeLocal() {
     );
   }
 
-  const name = city ?? 'Your location';
-  const href = `/here?lat=${data.lat}&lon=${data.lon}&name=${encodeURIComponent(name)}`;
+  const more = `/here?lat=${data.lat}&lon=${data.lon}&name=${encodeURIComponent(data.name)}`;
   return (
-    <div className="grid overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-[1.25fr_1fr]">
-      <div className="p-5" style={{ background: data.color ? `${data.color}24` : undefined }}>
-        <p className="text-xs font-semibold text-muted">Your location: {name}</p>
-        <div className="mt-2 flex flex-wrap items-end gap-4">
-          <div>
-            <span className="text-6xl font-bold leading-none tabular-nums">{data.aqi ?? '\u2014'}</span>
-            <span className="block text-xs text-muted">AQI (US)</span>
-          </div>
-          {data.label && data.color && (
-            <span className="rounded-lg px-3 py-1.5 text-lg font-semibold" style={{ background: data.color, color: textOn(data.color) }}>{data.label}</span>
-          )}
-        </div>
-        <p className="mt-3 text-sm">PM2.5: <b>{data.pm25 ?? '\u2014'} &micro;g/m&sup3;</b> &nbsp; PM10: <b>{data.pm10 ?? '\u2014'} &micro;g/m&sup3;</b></p>
-      </div>
-      <div className="flex flex-col justify-between gap-3 border-t border-line p-5 md:border-l md:border-t-0">
-        {data.weather && (
-          <div className="flex items-center gap-3">
-            <Icon name={data.weather.icon} className="text-4xl" />
-            <div>
-              <p className="text-3xl font-semibold">{data.temp == null ? '\u2014' : `${Math.round(data.temp)}\u00b0C`}</p>
-              <p className="text-sm text-muted">{data.weather.label}</p>
-            </div>
-          </div>
-        )}
-        <p className="text-sm text-muted">Humidity {data.humidity ?? '\u2014'}% &middot; Wind {data.wind == null ? '\u2014' : Math.round(data.wind)} km/h</p>
-        <Link href={href} className="text-sm font-medium text-brand hover:underline">See the full forecast</Link>
+    <div>
+      <MapBanner lat={data.lat} lon={data.lon} color={data.usColor} />
+      <div className="relative z-10 -mt-16 sm:-mt-24 sm:px-6">
+        <LiveCard data={data} headingAs="h2" />
+        <p className="mt-3 text-right text-sm">
+          <Link href={more} className="font-medium text-link hover:underline">See pollutants, hourly forecast and 7 days</Link>
+        </p>
       </div>
     </div>
   );

@@ -1,19 +1,27 @@
 import Link from 'next/link';
 import GlobeLogo from '@/components/GlobeLogo';
-import SearchBox from '@/components/SearchBox';
 import HomeLocal from '@/components/HomeLocal';
+import SavedCities from '@/components/SavedCities';
 import Section from '@/components/Section';
 import ErrorPanel from '@/components/ErrorPanel';
 import { POPULAR_CITIES } from '@/lib/cities';
 import { getAqiMany } from '@/lib/api/airQuality';
+import { isBuildPhase } from '@/lib/api/client';
 import { cityHref } from '@/lib/api/geocoding';
 import { categorize } from '@/lib/aqi';
 
-export const revalidate = 900; // rebuild this page at most every 15 minutes
+export const revalidate = 3600; // rebuild this page at most once an hour
 
 export default async function HomePage() {
-  // One request fetches AQI for all popular cities at once.
-  const readings = await getAqiMany(POPULAR_CITIES).catch(() => null);
+  // One request fetches AQI for all popular cities at once (shared with the ranking page).
+  let readings: Awaited<ReturnType<typeof getAqiMany>> | null = null;
+  try {
+    readings = await getAqiMany(POPULAR_CITIES);
+  } catch (err) {
+    // Throwing makes Next.js keep showing the last good version of this page.
+    // During `next build` there is no earlier version, so show the "unavailable" panel instead.
+    if (!isBuildPhase()) throw err;
+  }
   const ranked = readings
     ? POPULAR_CITIES.map((c, i) => ({ ...c, aqi: readings[i]?.aqi ?? null }))
         .filter((c): c is typeof c & { aqi: number } => c.aqi != null)
@@ -22,20 +30,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-4">
-      <section className="flex flex-col items-center gap-4 rounded-2xl bg-brand-night px-4 py-8 text-center text-white sm:py-10">
-        <GlobeLogo size={200} interactive />
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Real-time air quality and weather, worldwide
-        </h1>
-        <p className="max-w-xl text-sm text-slate-300">
-          Live AQI, PM2.5, PM10 and 7-day forecasts for any city.
-        </p>
-        <div className="w-full max-w-xl text-left text-ink">
-          <SearchBox size="lg" />
-        </div>
-      </section>
-
       <HomeLocal />
+      <SavedCities />
 
       {ranked.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
@@ -46,15 +42,20 @@ export default async function HomePage() {
         <ErrorPanel title="Live city rankings are unavailable right now" detail="Please refresh in a few minutes." />
       )}
 
-      <Section title="Popular cities">
-        <div className="flex flex-wrap gap-2">
-          {POPULAR_CITIES.map((c) => (
-            <Link key={c.id} href={cityHref(c)} className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-brand hover:text-brand">
-              {c.name}
-            </Link>
-          ))}
+      <section className="flex flex-col items-center gap-6 rounded-2xl border border-line bg-card px-5 py-8 text-center md:flex-row md:items-center md:gap-10 md:px-10 md:text-left">
+        <GlobeLogo size={180} interactive />
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Real-time air quality and weather, worldwide</h1>
+          <p className="mt-2 text-sm text-muted">Live AQI, PM2.5, PM10 and 7-day forecasts for any city. Drag the globe to spin it.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
+            {POPULAR_CITIES.map((c) => (
+              <Link key={c.id} href={cityHref(c)} className="rounded-full border border-line px-3 py-1.5 text-sm hover:border-link hover:text-link">
+                {c.name}
+              </Link>
+            ))}
+          </div>
         </div>
-      </Section>
+      </section>
     </div>
   );
 }
@@ -67,7 +68,7 @@ function CityList({ title, cities }: { title: string; cities: { id: number; name
           const cat = categorize('us', c.aqi)!;
           return (
             <li key={c.id}>
-              <Link href={cityHref(c)} className="flex items-center gap-3 py-2.5 hover:text-brand">
+              <Link href={cityHref(c)} className="flex items-center gap-3 py-2.5 hover:text-link">
                 <span className="h-8 w-1.5 rounded-full" style={{ background: cat.color }} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{c.name}</span>
@@ -79,7 +80,7 @@ function CityList({ title, cities }: { title: string; cities: { id: number; name
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-muted">US AQI &middot; <Link href="/ranking" className="text-brand hover:underline">See the full ranking</Link></p>
+      <p className="mt-2 text-xs text-muted">US AQI &middot; <Link href="/ranking" className="text-link hover:underline">See the full ranking</Link></p>
     </Section>
   );
 }

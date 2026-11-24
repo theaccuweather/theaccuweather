@@ -2,15 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-html { -webkit-text-size-adjust: 100%; }
-body { @apply bg-page text-ink antialiased; }
+/* Dark theme (default). Values are "R G B" so Tailwind can add opacity. */
+:root {
+  color-scheme: dark;
+  --taw-page: 11 18 32;
+  --taw-card: 20 28 46;
+  --taw-raised: 30 40 62;
+  --taw-line: 44 57 82;
+  --taw-ink: 238 242 247;
+  --taw-muted: 160 172 190;
+  --taw-link: 77 163 255;
+}
+/* Light theme, switched on by the "Lights" button in the header. */
+html.light {
+  color-scheme: light;
+  --taw-page: 244 246 251;
+  --taw-card: 255 255 255;
+  --taw-raised: 238 241 247;
+  --taw-line: 227 231 239;
+  --taw-ink: 31 38 51;
+  --taw-muted: 91 100 117;
+  --taw-link: 0 103 214;
+}
 
-/* Small satellite dot that orbits the large globe logo. */
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-page text-ink antialiased; overflow-x: clip; }
+
+/* AQI colours like yellow are too pale on white, so darken them in the light theme. */
+.light .taw-aqi-num { filter: brightness(0.72) saturate(1.2); }
+
 @media (prefers-reduced-motion: no-preference) {
+  /* Small satellite dot that orbits the large globe logo. */
   .taw-orbit { transform-box: view-box; transform-origin: 100px 100px; animation: taw-spin 7s linear infinite; }
+  /* The cloud mascot gently floats. */
+  .taw-float { animation: taw-float 4s ease-in-out infinite; }
 }
 @keyframes taw-spin { to { transform: rotate(360deg); } }
+@keyframes taw-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 /* Hide scrollbars on horizontal strips but keep them scrollable. */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Map banner */
+.leaflet-container { background: rgb(var(--taw-raised)); font-family: inherit; }
+.leaflet-control-attribution { font-size: 10px; }
+/* Turn OpenStreetMap's light tiles into a dark, low-colour street map in the dark theme. */
+html:not(.light) .taw-tiles { filter: invert(1) hue-rotate(180deg) grayscale(0.85) brightness(0.8) contrast(1.15); }
+html.light .taw-tiles { filter: grayscale(0.4); }

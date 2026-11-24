@@ -16,9 +16,10 @@ export default function AboutPage() {
       </Section>
       <Section title="Where the data comes from">
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed">
-          <li>Weather forecasts and air-quality data: <a className="text-brand hover:underline" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, licensed under CC BY 4.0. Air quality comes from the CAMS global model, so it is an estimate for the area, not a reading from a street-level sensor.</li>
+          <li>Weather forecasts and air-quality data: <a className="text-link hover:underline" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, licensed under CC BY 4.0. Air quality comes from the CAMS global model, so it is an estimate for the area, not a reading from a street-level sensor.</li>
           <li>City search: Open-Meteo Geocoding, based on GeoNames (CC BY 4.0).</li>
           <li>Earth imagery in the logo: NASA Visible Earth, Blue Marble (public domain).</li>
+          <li>Map tiles: &copy; OpenStreetMap contributors (ODbL).</li>
           <li>Icons: Font Awesome Free (CC BY 4.0).</li>
         </ul>
       </Section>

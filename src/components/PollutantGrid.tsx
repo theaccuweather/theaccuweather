@@ -8,7 +8,7 @@ export default function PollutantGrid({ pollutants }: { pollutants: AirQuality['
       {pollutants.map((p) => {
         const cat = categorize('us', p.usSub);
         return (
-          <div key={p.key} className="rounded-xl border border-line border-b-4 p-3" style={{ borderBottomColor: cat?.color ?? '#e3e7ef' }}>
+          <div key={p.key} className="rounded-xl border border-line border-b-4 p-3" style={{ borderBottomColor: cat?.color ?? 'rgb(var(--taw-line))' }}>
             <p className="text-xs text-muted">{p.label}</p>
             <p className="text-xl font-semibold tabular-nums">{p.value ?? '\u2014'}</p>
             <p className="text-xs text-muted">{p.unit}</p>

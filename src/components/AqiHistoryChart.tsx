@@ -17,7 +17,7 @@ export default function AqiHistoryChart({ history }: { history: { time: string; 
     <div>
       <svg viewBox={`0 0 ${W} ${H + 18}`} className="h-48 w-full" role="img"
         aria-label={`US AQI over the last 24 hours, from ${min.aqi} to ${max.aqi}`} preserveAspectRatio="none">
-        <line x1="0" x2={W} y1={H} y2={H} stroke="#e3e7ef" />
+        <line x1="0" x2={W} y1={H} y2={H} className="stroke-line" />
         {history.map((h, i) => {
           if (h.aqi == null) return null;
           const bh = Math.max(2, (h.aqi / top) * H);
@@ -28,7 +28,7 @@ export default function AqiHistoryChart({ history }: { history: { time: string; 
           );
         })}
         {ticks.map((i) => history[i] && (
-          <text key={i} x={i * (bw + gap) + bw / 2} y={H + 14} fontSize="11" fill="#5b6475"
+          <text key={i} x={i * (bw + gap) + bw / 2} y={H + 14} fontSize="11" className="fill-muted"
             textAnchor={i === 0 ? 'start' : i === history.length - 1 ? 'end' : 'middle'}>
             {hourLabel(history[i].time)}
           </text>
