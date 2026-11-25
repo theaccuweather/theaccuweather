@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import LiveCard from './LiveCard';
+import MapBanner from './MapBanner';
 import Breadcrumbs, { type Crumb } from './Breadcrumbs';
 import LinkGrid, { type GridLink } from './LinkGrid';
-import MapBanner from './MapBanner';
 import GlobeFocus from './GlobeFocus';
 import Section from './Section';
 import ErrorPanel from './ErrorPanel';
@@ -10,6 +10,7 @@ import PollutantGrid from './PollutantGrid';
 import AqiHistoryChart from './AqiHistoryChart';
 import HourlyStrip from './HourlyStrip';
 import DailyForecast from './DailyForecast';
+import HistoryPanel from './HistoryPanel';
 import { getForecast } from '@/lib/api/forecast';
 import { getAirQuality } from '@/lib/api/airQuality';
 import { isRateLimit } from '@/lib/api/client';
@@ -66,6 +67,8 @@ export default async function CityView({ name, region, lat, lon, href, crumbs, r
       ) : (
         <ErrorPanel title="Air quality data is unavailable right now" />
       )}
+
+      <Section title="Last 30 days"><HistoryPanel lat={lat} lon={lon} name={name} /></Section>
 
       {usCat && (
         <Section title="Health advice">

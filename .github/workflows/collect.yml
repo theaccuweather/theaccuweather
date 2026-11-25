@@ -1,0 +1,20 @@
+# Every 3 hours, ask the website to save weather and AQI for ~240 cities (the rankings history).
+# Needs a repository secret named CRON_SECRET with the same value as in Vercel.
+# Note: GitHub pauses scheduled workflows after 60 days without commits; push or re-enable it then.
+name: Collect weather and AQI
+
+on:
+  schedule:
+    - cron: '17 */3 * * *' # 00:17, 03:17, 06:17 … UTC
+  workflow_dispatch: {} # adds a "Run workflow" button for testing
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the collector
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.theaccuweather.com/api/cron/collect"

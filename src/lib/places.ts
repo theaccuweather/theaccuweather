@@ -3,6 +3,7 @@
 // src/data/places.ts. Server-side only: it holds ~2 MB, so never import it from a 'use client' file.
 import raw from '@/data/places';
 import { slugify } from '@/lib/api/geocoding';
+import { POPULAR_CITIES } from '@/lib/cities';
 
 // [GeoNames id, name, country code, state code, latitude, longitude, population]
 type Row = [number, string, string, string, number, number, number];
@@ -106,3 +107,15 @@ export const SITEMAP_PER_FILE = 5000;
 export const sitemapFileCount = () => 1 + Math.ceil(index().rows.length / SITEMAP_PER_FILE);
 export const sitemapCities = (file: number): PlaceCity[] =>
   index().rows.slice((file - 1) * SITEMAP_PER_FILE, file * SITEMAP_PER_FILE).map(toCity);
+
+// ---- cities the collector saves every 3 hours: the 200 largest, plus the home page's popular cities ----
+export const COLLECT_TOP = 200;
+export function collectedCities(): PlaceCity[] {
+  const list = index().rows.slice(0, COLLECT_TOP).map(toCity);
+  const seen = new Set(list.map((c) => c.id));
+  for (const p of POPULAR_CITIES) {
+    const c = getCityById(p.id);
+    if (c && !seen.has(c.id)) { list.push(c); seen.add(c.id); }
+  }
+  return list;
+}

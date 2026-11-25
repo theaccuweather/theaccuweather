@@ -5,28 +5,17 @@ import SavedCities from '@/components/SavedCities';
 import Section from '@/components/Section';
 import ErrorPanel from '@/components/ErrorPanel';
 import { POPULAR_CITIES } from '@/lib/cities';
-import { getAqiMany } from '@/lib/api/airQuality';
-import { isBuildPhase } from '@/lib/api/client';
+import { currentRanking } from '@/lib/rankings';
 import { cityHref } from '@/lib/api/geocoding';
 import { categorize } from '@/lib/aqi';
 
 export const revalidate = 3600; // rebuild this page at most once an hour
 
 export default async function HomePage() {
-  // One request fetches AQI for all popular cities at once (shared with the ranking page).
-  let readings: Awaited<ReturnType<typeof getAqiMany>> | null = null;
-  try {
-    readings = await getAqiMany(POPULAR_CITIES);
-  } catch (err) {
-    // Throwing makes Next.js keep showing the last good version of this page.
-    // During `next build` there is no earlier version, so show the "unavailable" panel instead.
-    if (!isBuildPhase()) throw err;
-  }
-  const ranked = readings
-    ? POPULAR_CITIES.map((c, i) => ({ ...c, aqi: readings[i]?.aqi ?? null }))
-        .filter((c): c is typeof c & { aqi: number } => c.aqi != null)
-        .sort((a, b) => b.aqi - a.aqi)
-    : [];
+  // Top and bottom cities: from the collector's database when it's set up (240 cities),
+  // otherwise one live request for the 40 popular cities (shared with the ranking page).
+  const ranking = await currentRanking();
+  const ranked = (ranking?.rows ?? []).filter((r): r is typeof r & { aqi: number } => r.aqi != null);
 
   return (
     <div className="space-y-4">
