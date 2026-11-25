@@ -1,7 +1,7 @@
 // One place for site-wide settings. Change the domain here or via NEXT_PUBLIC_SITE_URL.
 export const SITE = {
   name: 'theaccuweather',
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://theaccuweather.com',
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.theaccuweather.com',
   description:
     'Live air quality index (AQI), PM2.5, PM10 and weather forecasts for cities worldwide.',
   disclaimer: 'Not affiliated with AccuWeather, Inc.',

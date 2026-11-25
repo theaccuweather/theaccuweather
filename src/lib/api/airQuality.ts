@@ -25,7 +25,7 @@ type Raw = {
 const HOURLY = ['us_aqi', 'european_aqi', ...POLLUTANTS];
 
 /** Air quality for one location from Open-Meteo's global air-quality model (CAMS). */
-export async function getAirQuality(lat: number, lon: number): Promise<AirQuality> {
+export async function getAirQuality(lat: number, lon: number, revalidate?: number): Promise<AirQuality> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -34,7 +34,7 @@ export async function getAirQuality(lat: number, lon: number): Promise<AirQualit
     forecast_days: '5',
     timezone: 'auto',
   });
-  const raw = await getJson<Raw>(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+  const raw = await getJson<Raw>(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`, revalidate);
   const times: string[] = raw.hourly?.time ?? [];
   const series = (k: string) => (raw.hourly?.[k] ?? []).map(num);
   const offset = typeof raw.utc_offset_seconds === 'number' ? raw.utc_offset_seconds : 0;
@@ -83,14 +83,14 @@ export async function getAirQuality(lat: number, lon: number): Promise<AirQualit
 }
 
 /** Current US AQI and PM2.5 for many places in ONE request. */
-export async function getAqiMany(points: { lat: number; lon: number }[]) {
+export async function getAqiMany(points: { lat: number; lon: number }[], revalidate?: number) {
   const params = new URLSearchParams({
     latitude: points.map((p) => p.lat).join(','),
     longitude: points.map((p) => p.lon).join(','),
     current: 'us_aqi,pm2_5',
     timezone: 'auto',
   });
-  const raw = await getJson<unknown>(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`);
+  const raw = await getJson<unknown>(`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`, revalidate);
   const list = (Array.isArray(raw) ? raw : [raw]) as { current?: Record<string, unknown> }[];
   return list.map((r) => {
     const aqi = num(r.current?.us_aqi);

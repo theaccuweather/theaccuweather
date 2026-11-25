@@ -54,6 +54,9 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
+          <Link href="/country" className="mt-4 inline-block text-sm font-medium text-link hover:underline">
+            Browse all countries, states and cities
+          </Link>
         </div>
       </section>
     </div>

@@ -1,4 +1,7 @@
+import Link from 'next/link';
 import LiveCard from './LiveCard';
+import Breadcrumbs, { type Crumb } from './Breadcrumbs';
+import LinkGrid, { type GridLink } from './LinkGrid';
 import MapBanner from './MapBanner';
 import GlobeFocus from './GlobeFocus';
 import Section from './Section';
@@ -13,11 +16,16 @@ import { isRateLimit } from '@/lib/api/client';
 import { categorize, HEALTH_ADVICE } from '@/lib/aqi';
 import { buildHero } from '@/lib/hero';
 
-type Props = { name: string; region: string; lat: number; lon: number; href?: string };
+export type Related = { title: string; links: GridLink[]; more?: { name: string; href: string } };
+type Props = {
+  name: string; region: string; lat: number; lon: number; href?: string;
+  crumbs?: Crumb[]; related?: Related | null;
+  refresh?: number; // seconds the weather and AQI data is reused (defaults to 1 hour)
+};
 
 /** Everything on a city page. Weather and AQI load in parallel; if one fails, the other still shows. */
-export default async function CityView({ name, region, lat, lon, href }: Props) {
-  const [fc, aq] = await Promise.allSettled([getForecast(lat, lon), getAirQuality(lat, lon)]);
+export default async function CityView({ name, region, lat, lon, href, crumbs, related, refresh }: Props) {
+  const [fc, aq] = await Promise.allSettled([getForecast(lat, lon, refresh), getAirQuality(lat, lon, refresh)]);
   // If the provider is rate-limiting us, or nothing loaded, throw: Next.js then keeps showing
   // the last good version of this page instead of caching an error version for an hour.
   const failed = [fc, aq].filter((r): r is PromiseRejectedResult => r.status === 'rejected');
@@ -38,6 +46,8 @@ export default async function CityView({ name, region, lat, lon, href }: Props) 
           {air || forecast ? <LiveCard data={hero} href={href} headingAs="h1" /> : <ErrorPanel title={`We couldn't load live data for ${name}`} />}
         </div>
       </div>
+
+      {crumbs && crumbs.length > 0 && <Breadcrumbs items={crumbs} />}
 
       {forecast ? (
         <>
@@ -64,6 +74,17 @@ export default async function CityView({ name, region, lat, lon, href }: Props) 
               <li key={t} className="flex gap-2"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: usCat.color }} />{t}</li>
             ))}
           </ul>
+        </Section>
+      )}
+
+      {related && (
+        <Section title={related.title}>
+          <LinkGrid links={related.links} />
+          {related.more && (
+            <p className="mt-3 text-sm">
+              <Link href={related.more.href} className="font-medium text-link hover:underline">See every place in {related.more.name}</Link>
+            </p>
+          )}
         </Section>
       )}
 

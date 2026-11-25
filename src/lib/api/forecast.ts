@@ -40,7 +40,7 @@ const HOURLY = [
 ] as const;
 
 /** Current conditions, the next 24 hours and 7 days for one location (metric units). */
-export async function getForecast(lat: number, lon: number): Promise<Forecast> {
+export async function getForecast(lat: number, lon: number, revalidate?: number): Promise<Forecast> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -49,7 +49,7 @@ export async function getForecast(lat: number, lon: number): Promise<Forecast> {
     forecast_days: '7',
     wind_speed_unit: 'kmh',
   });
-  const raw = await getJson<Raw>(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const raw = await getJson<Raw>(`https://api.open-meteo.com/v1/forecast?${params}`, revalidate);
   const h = raw.hourly;
   const times: string[] = h?.time ?? [];
   const col = (k: (typeof HOURLY)[number]) => (h?.[k] ?? []).map(num);
@@ -113,7 +113,7 @@ export async function getForecast(lat: number, lon: number): Promise<Forecast> {
 }
 
 /** Temperature and sky for many places in ONE request (used by home and ranking pages). */
-export async function getWeatherMany(points: { lat: number; lon: number }[]) {
+export async function getWeatherMany(points: { lat: number; lon: number }[], revalidate = 10_800) {
   const params = new URLSearchParams({
     latitude: points.map((p) => p.lat).join(','),
     longitude: points.map((p) => p.lon).join(','),
@@ -121,7 +121,7 @@ export async function getWeatherMany(points: { lat: number; lon: number }[]) {
     timezone: 'auto',
   });
   // Refreshed every 3 hours: only the ranking's temperature column uses this.
-  const raw = await getJson<unknown>(`https://api.open-meteo.com/v1/forecast?${params}`, 10_800);
+  const raw = await getJson<unknown>(`https://api.open-meteo.com/v1/forecast?${params}`, revalidate);
   const list = (Array.isArray(raw) ? raw : [raw]) as { current?: Record<string, unknown> }[];
   return list.map((r) => ({
     temp: num(r.current?.temperature_2m),

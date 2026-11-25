@@ -18,6 +18,7 @@ export default function Header() {
           <SearchBox />
         </div>
         <nav className="hidden items-center gap-5 text-sm font-medium sm:flex">
+          <Link href="/country" className="hover:text-link">Countries</Link>
           <Link href="/ranking" className="hover:text-link">Ranking</Link>
           <Link href="/about" className="hover:text-link">About</Link>
         </nav>
