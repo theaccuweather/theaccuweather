@@ -28,3 +28,22 @@ export async function ensureSchema(sql: Sql) {
   )`;
   await sql`create index if not exists snapshots_taken_at_idx on snapshots (taken_at)`;
 }
+
+/** Email alert sign-ups. Unsubscribing deletes the row. */
+export async function ensureAlertSchema(sql: Sql) {
+  await sql`create table if not exists alert_subs (
+    id bigserial primary key,
+    email text not null,
+    place_name text not null,
+    place_href text not null,
+    lat real not null,
+    lon real not null,
+    weather boolean not null default true,
+    aqi_threshold smallint,
+    token text not null unique,
+    confirmed boolean not null default false,
+    created_at timestamptz not null default now(),
+    last_sent_at timestamptz,
+    unique (email, place_href)
+  )`;
+}

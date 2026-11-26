@@ -11,11 +11,13 @@ import AqiHistoryChart from './AqiHistoryChart';
 import HourlyStrip from './HourlyStrip';
 import DailyForecast from './DailyForecast';
 import HistoryPanel from './HistoryPanel';
+import AlertSignup from './AlertSignup';
 import { getForecast } from '@/lib/api/forecast';
 import { getAirQuality } from '@/lib/api/airQuality';
 import { isRateLimit } from '@/lib/api/client';
 import { categorize, HEALTH_ADVICE } from '@/lib/aqi';
 import { buildHero } from '@/lib/hero';
+import { alertsEnabled } from '@/lib/email';
 
 export type Related = { title: string; links: GridLink[]; more?: { name: string; href: string } };
 type Props = {
@@ -69,6 +71,10 @@ export default async function CityView({ name, region, lat, lon, href, crumbs, r
       )}
 
       <Section title="Last 30 days"><HistoryPanel lat={lat} lon={lon} name={name} /></Section>
+
+      {href && alertsEnabled() && (
+        <Section title={`Weather and air quality alerts for ${name}`}><AlertSignup name={name} href={href} lat={lat} lon={lon} /></Section>
+      )}
 
       {usCat && (
         <Section title="Health advice">

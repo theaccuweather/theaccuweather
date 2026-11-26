@@ -18,3 +18,9 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 120 \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "https://www.theaccuweather.com/api/cron/collect"
+      - name: Send weather and AQI alerts
+        if: always()
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://www.theaccuweather.com/api/cron/alerts"
