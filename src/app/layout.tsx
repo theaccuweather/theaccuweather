@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
-import 'leaflet/dist/leaflet.css';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';

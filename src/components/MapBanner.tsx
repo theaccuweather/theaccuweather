@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type * as Leaflet from 'leaflet';
+import 'leaflet/dist/leaflet.css'; // only pages with a map load the map styles
 import RadarControls from './RadarControls';
 import { attachRadar, type RadarControl } from '@/lib/radar';
 

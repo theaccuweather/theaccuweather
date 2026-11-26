@@ -29,26 +29,33 @@ export function focusGlobe(f: GlobeFocus, source: 'page' | 'ip' = 'page') {
   window.dispatchEvent(new CustomEvent(EVENT, { detail: window.__tawFocus }));
 }
 
-// ---- shared texture (loaded once for every globe instance) ----
+// ---- shared textures (each loaded once per page) ----
+// Small globes (the header) use a 512x256 image (~25 KB); the big home-page globe uses the
+// 1600x800 one. The header globe is on every page, so this saves ~115 KB per first visit.
 type Tex = { d: Uint8ClampedArray; w: number; h: number };
-let texPromise: Promise<Tex> | null = null;
-function loadTexture(): Promise<Tex> {
-  texPromise ??= new Promise<Tex>((resolve, reject) => {
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      const w = 1600, h = 800;
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      const ctx = c.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return reject(new Error('Canvas unavailable'));
-      ctx.drawImage(img, 0, 0, w, h);
-      resolve({ d: ctx.getImageData(0, 0, w, h).data, w, h });
-    };
-    img.onerror = () => reject(new Error('Earth image failed to load'));
-    img.src = '/earth-2k.jpg';
-  });
-  return texPromise;
+const texCache = new Map<string, Promise<Tex>>();
+function loadTexture(big: boolean): Promise<Tex> {
+  const src = big ? '/earth-2k.jpg' : '/earth-512.jpg';
+  const [w, h] = big ? [1600, 800] : [512, 256];
+  let p = texCache.get(src);
+  if (!p) {
+    p = new Promise<Tex>((resolve, reject) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return reject(new Error('Canvas unavailable'));
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve({ d: ctx.getImageData(0, 0, w, h).data, w, h });
+      };
+      img.onerror = () => reject(new Error('Earth image failed to load'));
+      img.src = src;
+    });
+    texCache.set(src, p);
+  }
+  return p;
 }
 
 // ---- visitor location (asked once) ----
@@ -188,7 +195,7 @@ export default function GlobeLogo({ size = 42, interactive = false }: { size?: n
       raf = requestAnimationFrame(frame);
     };
 
-    loadTexture()
+    loadTexture(big)
       .then((t) => {
         if (!alive) return;
         tex = t;
