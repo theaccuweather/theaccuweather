@@ -20,6 +20,7 @@ export default function Header() {
         <nav className="hidden items-center gap-5 text-sm font-medium sm:flex">
           <Link href="/country" className="hover:text-link">Countries</Link>
           <Link href="/ranking" className="hover:text-link">Ranking</Link>
+          <Link href="/map" className="hover:text-link">Map</Link>
           <Link href="/about" className="hover:text-link">About</Link>
         </nav>
         <div className="ml-auto flex items-center gap-4">

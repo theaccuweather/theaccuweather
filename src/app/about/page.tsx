@@ -19,7 +19,7 @@ export default function AboutPage() {
           <li>Weather forecasts and air-quality data: <a className="text-link hover:underline" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>, licensed under CC BY 4.0. Air quality comes from the CAMS global model, so it is an estimate for the area, not a reading from a street-level sensor.</li>
           <li>City, state and country lists: <a className="text-link hover:underline" href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0), cities with more than 15,000 people. City search: Open-Meteo Geocoding, also based on GeoNames.</li>
           <li>Earth imagery in the logo: NASA Visible Earth, Blue Marble (public domain).</li>
-          <li>Map tiles: &copy; OpenStreetMap contributors (ODbL).</li>
+          <li>Map tiles: &copy; OpenStreetMap contributors (ODbL). Rain radar: <a className="text-link hover:underline" href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a>.</li>
           <li>Icons: Font Awesome Free (CC BY 4.0).</li>
         </ul>
       </Section>

@@ -17,6 +17,7 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
       { url: `${SITE.url}/ranking`, changeFrequency: 'hourly', priority: 0.8 },
       { url: `${SITE.url}/ranking/24-hours`, changeFrequency: 'hourly', priority: 0.6 },
       { url: `${SITE.url}/ranking/30-days`, changeFrequency: 'daily', priority: 0.6 },
+      { url: `${SITE.url}/map`, changeFrequency: 'hourly', priority: 0.6 },
       { url: `${SITE.url}/country`, changeFrequency: 'monthly', priority: 0.6 },
       { url: `${SITE.url}/about`, changeFrequency: 'monthly', priority: 0.3 },
       ...listCountries().map((c) => ({ url: `${SITE.url}${countryHref(c.code)}`, priority: 0.6 })),
