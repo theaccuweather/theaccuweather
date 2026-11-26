@@ -25,7 +25,7 @@ async function fetchList(url: string): Promise<Loc[]> {
 }
 
 export async function GET(req: Request) {
-  const secret=[REDACTED_PASSWORD]
+  const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const sql = getDb();
   if (!sql || !process.env.RESEND_API_KEY) return NextResponse.json({ ok: true, skipped: 'Alerts are not switched on' });
