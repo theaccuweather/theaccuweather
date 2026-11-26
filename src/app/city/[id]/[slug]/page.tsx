@@ -5,7 +5,9 @@ import type { Crumb } from '@/components/Breadcrumbs';
 import { cityHref, getPlace, slugify } from '@/lib/api/geocoding';
 import { citiesInState, countryHref, getCityById, getCountry, getStateOf, stateHref } from '@/lib/places';
 
-export const revalidate = 3600; // the page is rebuilt at most hourly; its weather data is reused for 1–3 hours
+// Each rebuild counts as a Vercel ISR write (free plan: 200,000 a month), and search bots visit
+// all 31,799 city pages, so pages are rebuilt at most every 6 hours.
+export const revalidate = 21600;
 export async function generateStaticParams() { return []; } // every city page is built on its first visit, then cached
 
 type Props = { params: Promise<{ id: string; slug: string }> };
@@ -35,8 +37,8 @@ async function load(idText: string): Promise<CityInfo | null> {
       related: state && others.length > 0
         ? { title: `More places in ${state.name}`, links: others.map((o) => ({ name: o.name, href: cityHref(o) })), more: { name: state.name, href: stateHref(state) } }
         : null,
-      // Cities of 1 million+ refresh hourly; smaller ones every 3 hours, to stay inside the free API budget.
-      refresh: c.population >= 1_000_000 ? 3600 : 10_800,
+      // Cities of 1 million+ get new data every 6 hours; smaller ones daily (free ISR-write budget).
+      refresh: c.population >= 1_000_000 ? 21_600 : 86_400,
     };
   }
 
@@ -50,7 +52,7 @@ async function load(idText: string): Promise<CityInfo | null> {
   return {
     id, name: p.name, lat: p.latitude, lon: p.longitude,
     region: [p.admin1, p.country].filter((x): x is string => Boolean(x) && x !== p.name).join(', '),
-    crumbs, related: null, refresh: 10_800,
+    crumbs, related: null, refresh: 86_400,
   };
 }
 

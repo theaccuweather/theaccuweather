@@ -9,7 +9,7 @@ import { liveReadings } from '@/lib/live';
 import { countryHref, getCountry, getStateOf, listStates, stateHref, topCitiesInCountry } from '@/lib/places';
 
 // Live readings for the biggest cities refresh every 6 hours (244 country pages share the free API budget).
-export const revalidate = 21_600;
+export const revalidate = 86_400;
 export async function generateStaticParams() { return []; } // each page is built on its first visit
 
 type Props = { params: Promise<{ cc: string }> };
@@ -32,7 +32,7 @@ export default async function CountryPage({ params }: Props) {
   if (!country) notFound();
 
   const top = topCitiesInCountry(country.code, 6);
-  const live = await liveReadings(top, 21_600);
+  const live = await liveReadings(top, 86_400);
   const states = listStates(country.code);
   const rows = top.map((c, i) => {
     const st = getStateOf(c);
@@ -55,7 +55,7 @@ export default async function CountryPage({ params }: Props) {
       <Section title={`Biggest cities in ${country.name}`}>
         <PlaceTable rows={rows} />
         <p className="mt-2 text-xs text-muted">
-          {live ? 'Refreshed every 6 hours. Open a city for this hour’s weather, the 7-day forecast and live AQI.' : 'Live readings are unavailable right now. Open a city to try again.'}
+          {live ? 'Refreshed daily. Open a city for this hour’s weather, the 7-day forecast and live AQI.' : 'Live readings are unavailable right now. Open a city to try again.'}
         </p>
       </Section>
       <Section title="States and regions">

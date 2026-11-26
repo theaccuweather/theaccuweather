@@ -10,4 +10,4 @@ export const SITE = {
 // How long (seconds) server-fetched weather and AQI data is reused before refreshing.
 // 1 hour: the weather and air-quality models update hourly, and Open-Meteo's free plan
 // allows fewer than 10,000 calls a day, so refreshing more often would only burn budget.
-export const REVALIDATE_SECONDS = 3600;
+export const REVALIDATE_SECONDS = 10_800;

@@ -10,6 +10,7 @@ export default function PrivacyPage() {
       <Section title="What we collect">
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed">
           <li><b>Browsing the site:</b> no account and no tracking cookies. Your browser remembers your chosen AQI standard, light or dark theme, and saved places on your own device.</li>
+          <li><b>Visitor counts:</b> Vercel Web Analytics counts page views without cookies and without storing anything that identifies you.</li>
           <li><b>Your location:</b> our host (Vercel) tells us your approximate city from your IP address so we can show local weather. We don’t store it. “Locate me” uses your browser’s location only when you allow it, and only to open the forecast.</li>
           <li><b>Email alerts:</b> if you sign up, we store your email address, the place, your alert choices and when we last emailed you.</li>
         </ul>
